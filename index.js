@@ -1,30 +1,9 @@
+require('dotenv').config()
 const express = require('express')
 const app = express()
 const morgan = require('morgan')
 const cors = require('cors')
-
-let persons = [
-    { 
-      "id": 1,
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": 2,
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": 3,
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": 4,
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+const Person = require('./models/person')
 
 app.use(cors())
 app.use(express.json());
@@ -59,18 +38,21 @@ app.get('/info', (request, response) => {
 })
 
 app.get('/api/persons', (request, response) => {
-  response.json(persons)
+  Person.find({}).then(person => {
+    response.json(person)
+  })
 })
 
 app.get('/api/person/:id', (request, response) => {
-    const id = Number(request.params.id)
-    const person = persons.find(person => person.id === id)
-    
+  //const id = Number(request.params.id)
+  Person.findById(request.params.id).then(person => {
+    console.log(person)
     if (person) {
-        response.json(person)
+      response.json(person)
     } else {
-        response.status(404).end()
+      response.status(404).end()
     }
+  })
 })
 
 app.delete('/api/person/:id', (request, response) => {
@@ -101,38 +83,32 @@ app.post('/api/persons', (request, response) => {
         })
     }
 
-    const findPerson = persons.find( person => person.name.toLowerCase() === body.name.toLowerCase())
-    if(findPerson){
-        return response.status(400).json({
-            error: 'name must be unique'
-        })
-    }
+    // const findPerson = Person.find( person => person.name.toLowerCase() === body.name.toLowerCase())
+    // if(findPerson){
+    //     return response.status(400).json({
+    //         error: 'name must be unique'
+    //     })
+    // }
 
-    const person = {
+    const person = new Person({
         name: body.name,
         number: body.number,
         id: generateId(),
-    }
+    })
 
-    persons = persons.concat(person)
-
-    response.json(person)
+    person.save().then(savedPerson => {
+      console.log('person saved!')
+    })
 })
 
 const generateId = () => {
-    const maxId = persons.length > 0
+    const maxId = Person.find({}).length > 0
       ? Math.max(...persons.map(n => n.id))
       : 0
     return maxId + 1
 }
 
-// app.get('/api/persons', (request, response) => {
-//     Person.find({}).then(persons => {
-//         response.json(persons.map(person => person.toJSON()))
-//         })
-// })
-
-const PORT = process.env.PORT || 3001
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
